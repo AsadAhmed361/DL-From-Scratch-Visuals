@@ -50,6 +50,7 @@ I'm excited to continue this project and visualize more complex topics, such as:
 * **Convolutional Neural Networks (CNNs):** Understanding how filters process images.
 
 Stay tuned for more lessons!
+<img width="827" height="614" alt="image" src="https://github.com/user-attachments/assets/510c66fe-ef00-4455-9f6b-21d2d31337fb" />
 
 ---
 
