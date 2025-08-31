@@ -1,7 +1,8 @@
 # DL-From-Scratch-Visuals
 I'm learning ML/DL by generating interactive visualizations with AI. This repo documents my journey, transforming abstract concepts like neurons and backpropagation into tangible, hands-on experiences. Each lesson pairs an interactive web demo with the foundational Python code, making complex ideas simple to see and understand.
 
-<img width="610" height="553" alt="image" src="https://github.com/user-attachments/assets/2d5e092f-464c-4dd2-ae80-9d8a0b50adbb" /> <img width="609" height="550" alt="image" src="https://github.com/user-attachments/assets/06f9b5e6-8c8a-4d05-8015-c3171be51650" />
+<img width="616" height="552" alt="image" src="https://github.com/user-attachments/assets/ff06fe19-d754-460a-935e-07d4877e1d2c" />
+ <img width="609" height="550" alt="image" src="https://github.com/user-attachments/assets/06f9b5e6-8c8a-4d05-8015-c3171be51650" />
 
 
 
