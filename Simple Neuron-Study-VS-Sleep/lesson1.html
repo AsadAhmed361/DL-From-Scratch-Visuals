@@ -5,19 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Neural Network: Study vs. Sleep</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Orbitron:wght@400;700&display=swap');
+
         :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-color: #00aaff;
-            --accent-color: #ff5555;
+            --bg-color: #0d1a26; /* Dark blue/grey */
+            --surface-color: #1a2a3a; /* Slightly lighter surface */
+            --primary-color: #00aaff; /* Bright blue for accents */
+            --accent-color: #ff6b6b; /* Red for negative weights/reset */
             --text-color: #e0e0e0;
             --secondary-text-color: #a0a0a0;
-            --shadow-color: rgba(0, 0, 0, 0.4);
+            --shadow-color: rgba(0, 0, 0, 0.6);
+            --border-radius: 12px;
+            --gradient-start: #1a2a3a;
+            --gradient-end: #2a3d50;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-color), darken(var(--bg-color), 5%));
             color: var(--text-color);
             margin: 0;
             padding: 20px;
@@ -26,46 +31,76 @@
             align-items: flex-start;
             min-height: 100vh;
             flex-wrap: wrap;
+            line-height: 1.6;
+            background-attachment: fixed;
         }
 
         .container {
             display: flex;
             flex-direction: column;
             width: 100%;
-            max-width: 1000px;
-            gap: 20px;
+            max-width: 1200px; /* Increased max-width */
+            gap: 30px; /* Increased gap */
         }
 
         h1 {
             text-align: center;
             color: var(--primary-color);
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            text-shadow: 0 0 15px rgba(0, 170, 255, 0.7);
+            letter-spacing: 1.5px;
         }
 
         .main-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 20px;
+            gap: 30px;
+        }
+
+        @media (max-width: 992px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .nn-visualization-panel, .panel-section, .explanation-panel {
+            background: linear-gradient(145deg, var(--gradient-start), var(--gradient-end));
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 30px var(--shadow-color);
+            padding: 30px;
+            border: 1px solid rgba(0, 170, 255, 0.2); /* Subtle border */
         }
 
         .nn-visualization-panel {
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            padding: 30px;
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            min-height: 450px; /* Ensure a decent height */
+        }
+
+        .nn-visualization-panel h2, .panel-section h2, .explanation-panel h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
+            text-shadow: 0 0 8px rgba(0, 170, 255, 0.5);
         }
 
         .nn-graph {
             width: 100%;
-            height: 400px;
+            height: 350px;
             display: flex;
             justify-content: space-around;
             align-items: center;
             position: relative;
+            margin-top: 20px;
         }
 
         .layer {
@@ -73,30 +108,48 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 30px;
+            gap: 40px; /* Increased gap between neurons in a layer */
         }
 
         .neuron {
-            width: 80px;
-            height: 80px;
+            width: 90px; /* Slightly larger neurons */
+            height: 90px;
             border-radius: 50%;
-            border: 3px solid var(--primary-color);
+            border: 4px solid var(--primary-color); /* Thicker border */
+            background-color: rgba(0, 170, 255, 0.1); /* Slightly transparent fill */
             display: flex;
             justify-content: center;
             align-items: center;
             font-weight: bold;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            transition: background-color 0.4s ease, transform 0.2s ease, box-shadow 0.4s ease;
             position: relative;
-            box-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
-            font-size: 14px;
+            box-shadow: 0 0 15px rgba(0, 170, 255, 0.7); /* Stronger glow */
+            font-size: 16px; /* Larger font */
+            color: var(--text-color);
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            cursor: default;
+        }
+
+        .neuron:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(0, 170, 255, 0.9), 0 0 40px rgba(0, 170, 255, 0.4);
         }
 
         .neuron-label {
             position: absolute;
-            top: -25px;
-            color: var(--text-color);
-            font-size: 14px;
+            top: -30px; /* Adjusted position */
+            color: var(--secondary-text-color);
+            font-size: 13px; /* Slightly smaller for labels */
             white-space: nowrap;
+            background-color: var(--gradient-end);
+            padding: 3px 8px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px var(--shadow-color);
+        }
+
+        .output-layer .neuron-label {
+            top: unset;
+            bottom: -30px;
         }
 
         .connections-container {
@@ -106,64 +159,65 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            z-index: 1; /* Ensure connections are behind neuron labels if needed */
         }
 
         .connection {
-            position: absolute;
             stroke: var(--secondary-text-color);
-            stroke-width: 2;
-            opacity: 0.7;
-            transition: stroke-width 0.3s ease, opacity 0.3s ease;
+            stroke-width: 2px;
+            opacity: 0.6;
+            transition: stroke-width 0.3s ease, opacity 0.3s ease, stroke 0.3s ease;
+            /* Added animation for line drawing */
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 1s linear forwards;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
         }
 
         .connection.positive {
             stroke: var(--primary-color);
+            opacity: 0.8;
+            stroke-width: 3px;
         }
 
         .connection.negative {
             stroke: var(--accent-color);
+            opacity: 0.8;
+            stroke-width: 3px;
         }
 
         .weight-label {
             position: absolute;
-            font-size: 12px;
-            color: var(--secondary-text-color);
+            font-size: 11px; /* Smaller weight labels */
+            color: var(--text-color);
             background-color: var(--surface-color);
-            padding: 2px 5px;
+            padding: 3px 6px;
             border-radius: 5px;
             transform: translate(-50%, -50%);
             pointer-events: none;
             z-index: 10;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .output-label {
-            position: absolute;
-            bottom: -30px;
-            font-size: 16px;
+            margin-top: 20px;
+            font-size: 24px; /* Larger output text */
             font-weight: bold;
-            color: var(--text-color);
-            white-space: nowrap;
+            color: var(--primary-color);
+            text-shadow: 0 0 10px rgba(0, 170, 255, 0.8);
+            font-family: 'Orbitron', sans-serif;
         }
 
         .controls-panel {
             display: flex;
             flex-direction: column;
-            gap: 20px;
-        }
-
-        .panel-section {
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            padding: 20px;
-        }
-
-        .panel-section h2 {
-            margin-top: 0;
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-            color: var(--primary-color);
+            gap: 25px;
         }
 
         .slider-group, .select-group {
@@ -172,111 +226,241 @@
 
         label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            margin-bottom: 8px;
+            font-weight: 400;
+            color: var(--secondary-text-color);
+            font-size: 15px;
         }
 
         .slider-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
         }
 
         input[type="range"] {
             -webkit-appearance: none;
             width: 100%;
-            height: 8px;
-            background: #333;
+            height: 10px; /* Thicker slider track */
+            background: #334a5e; /* Darker track */
             border-radius: 5px;
             outline: none;
-            transition: opacity .2s;
+            transition: background 0.2s ease;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
         }
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 24px; /* Larger thumb */
+            height: 24px;
             background: var(--primary-color);
             border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 5px rgba(0, 170, 255, 0.8);
+            cursor: grab;
+            box-shadow: 0 0 8px var(--primary-color), 0 0 15px rgba(0, 170, 255, 0.4);
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            border: 2px solid var(--text-color);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            cursor: grabbing;
+            box-shadow: 0 0 15px var(--primary-color), 0 0 25px rgba(0, 170, 255, 0.6);
         }
 
         input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             background: var(--primary-color);
             border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 5px rgba(0, 170, 255, 0.8);
+            cursor: grab;
+            box-shadow: 0 0 8px var(--primary-color), 0 0 15px rgba(0, 170, 255, 0.4);
+            border: 2px solid var(--text-color);
+        }
+        input[type="range"]::-moz-range-thumb:active {
+            cursor: grabbing;
+            box-shadow: 0 0 15px var(--primary-color), 0 0 25px rgba(0, 170, 255, 0.6);
         }
 
         .slider-value {
-            min-width: 40px;
-            text-align: right;
+            min-width: 50px;
+            text-align: center;
             color: var(--accent-color);
             font-weight: bold;
+            font-size: 1.1em;
+            background-color: #2a3d50;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         select {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
-            background-color: #333;
+            background-color: #334a5e; /* Darker select background */
             color: var(--text-color);
-            border: 1px solid #555;
+            border: 1px solid #556a7f;
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23e0e0e0%22%20d%3D%22M287%20163.7c-4.4%204.4-10.9%207-17.7%207H23.1c-6.8%200-13.3-2.7-17.7-7-4.4-4.4-7-10.9-7-17.7s2.7-13.3%207-17.7l116.5-116.5c4.4-4.4%2010.9-7%2017.7-7s13.3%202.7%2017.7%207l116.5%20116.5c4.4%204.4%207%2010.9%207%2017.7s-2.6%2013.3-7%2017.7z%22%2F%3E%3C%2Fsvg%3E');
             background-repeat: no-repeat;
-            background-position: right 10px top 50%;
-            background-size: 12px;
+            background-position: right 15px center; /* Centered arrow */
+            background-size: 14px; /* Slightly larger arrow */
             cursor: pointer;
+            font-size: 1em;
         }
 
         select:focus {
             outline: none;
             border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px var(--primary-color), 0 0 10px rgba(0, 170, 255, 0.5);
         }
 
         .explanation-panel {
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            padding: 20px;
-            grid-column: span 2;
+            grid-column: span 2; /* Spans full width on larger screens */
+            padding: 25px 30px;
         }
 
-        .explanation-panel h2 {
-            margin-top: 0;
+        .explanation-panel h3 {
             color: var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+        }
+
+        .explanation-panel ul {
+            list-style-type: none; /* Remove default bullet */
+            padding-left: 0;
+        }
+
+        .explanation-panel ul li {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 10px;
+        }
+
+        .explanation-panel ul li::before {
+            content: '•'; /* Custom bullet point */
+            color: var(--primary-color);
+            position: absolute;
+            left: 0;
+            font-size: 1.2em;
+            line-height: 1.2;
+        }
+
+        .explanation-panel ul ul li::before {
+             content: '-'; /* Sub-bullet */
+             color: var(--accent-color);
         }
 
         .explanation-panel p {
-            line-height: 1.6;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            color: var(--secondary-text-color);
+        }
+
+        .explanation-panel strong {
+            color: var(--text-color);
         }
 
         .reset-btn {
             background-color: var(--accent-color);
             color: var(--text-color);
             border: none;
-            padding: 10px 20px;
+            padding: 12px 25px;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 1.1em;
             font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            margin-top: 10px;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            letter-spacing: 0.5px;
         }
 
         .reset-btn:hover {
-            background-color: #ff3333;
+            background-color: #ff4444;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+        }
+        .reset-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(255, 107, 107, 0.4);
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .container {
+                gap: 20px;
+            }
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 20px;
+            }
+            .nn-visualization-panel, .panel-section, .explanation-panel {
+                padding: 20px;
+            }
+            .nn-graph {
+                height: 300px;
+            }
+            .neuron {
+                width: 70px;
+                height: 70px;
+                font-size: 13px;
+            }
+            .neuron-label {
+                font-size: 11px;
+                top: -25px;
+            }
+            .output-label {
+                font-size: 20px;
+            }
+            input[type="range"]::-webkit-slider-thumb,
+            input[type="range"]::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+            }
+            .explanation-panel {
+                grid-column: span 1; /* Make it single column on smaller screens */
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            .nn-graph {
+                height: 250px;
+            }
+            .neuron {
+                width: 60px;
+                height: 60px;
+                font-size: 12px;
+            }
+            .neuron-label {
+                font-size: 10px;
+            }
+            .output-label {
+                font-size: 18px;
+            }
+            .reset-btn {
+                font-size: 1em;
+                padding: 10px 20px;
+            }
+            .slider-container {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            .slider-value {
+                width: 100%;
+                text-align: left;
+            }
         }
     </style>
 </head>
@@ -390,7 +574,7 @@
         </ul>
 
         <p>The calculation is straightforward:
-        `Output = Activation Function((x1 * w1) + (x2 * w2) + b)`</p>
+        <code>Output = Activation Function((x1 * w1) + (x2 * w2) + b)</code></p>
         <p>Adjust the sliders to see how each parameter instantly affects the final output!</p>
     </div>
 </div>
@@ -443,13 +627,14 @@
         const { study, sleep } = inputs;
         const { w1, w2 } = weights;
 
-        // Normalize inputs for better visualization
+        // Normalize inputs for better visualization (assuming max 10 for study/sleep)
         const studyNormalized = study / 10;
         const sleepNormalized = sleep / 10;
 
         // Update input neuron color and text
-        elements.neurons.inputStudy.style.backgroundColor = `hsl(210, 80%, ${30 + studyNormalized * 40}%)`;
-        elements.neurons.inputSleep.style.backgroundColor = `hsl(210, 80%, ${30 + sleepNormalized * 40}%)`;
+        // Input neuron color intensity based on input value
+        elements.neurons.inputStudy.style.backgroundColor = `hsl(210, 70%, ${20 + studyNormalized * 50}%)`;
+        elements.neurons.inputSleep.style.backgroundColor = `hsl(210, 70%, ${20 + sleepNormalized * 50}%)`;
         elements.neurons.inputStudy.innerText = study.toFixed(1);
         elements.neurons.inputSleep.innerText = sleep.toFixed(1);
 
@@ -461,18 +646,21 @@
         const outputProbability = activationFunc(z);
 
         // Update output neuron color and text
-        const outputIntensity = outputProbability;
-        elements.neurons.outputPass.style.backgroundColor = `hsl(210, 80%, ${20 + outputIntensity * 60}%)`;
+        // Output neuron color intensity based on output probability
+        elements.neurons.outputPass.style.backgroundColor = `hsl(${120 * outputProbability}, 70%, ${20 + outputProbability * 50}%)`; // Green for high, red for low
         elements.neurons.outputPass.innerText = outputProbability.toFixed(2);
 
         // Update output label
         elements.outputLabel.innerText = `Pass Probability: ${(outputProbability * 100).toFixed(2)}%`;
-
+        
         drawConnections();
     }
 
     function drawConnections() {
-        elements.connectionsSVG.innerHTML = ''; // Clear previous connections
+        // Clear previous connections and weight labels
+        elements.connectionsSVG.innerHTML = ''; 
+        document.querySelectorAll('.weight-label').forEach(label => label.remove());
+
         const svg = elements.connectionsSVG;
         const neuronMap = {
             inputStudy: elements.neurons.inputStudy,
@@ -505,22 +693,23 @@
             line.classList.add('connection');
             if (conn.weight > 0) {
                 line.classList.add('positive');
-            } else {
+            } else if (conn.weight < 0) {
                 line.classList.add('negative');
             }
-            line.style.opacity = Math.min(1, Math.abs(conn.weight) / 5 + 0.3);
-            line.style.strokeWidth = Math.min(5, Math.abs(conn.weight) / 2 + 1);
+            // Dynamic stroke width and opacity based on absolute weight
+            line.style.opacity = Math.min(1, Math.abs(conn.weight) / 5 + 0.3); // Min opacity 0.3, max 1
+            line.style.strokeWidth = `${Math.min(5, Math.abs(conn.weight) / 1.5 + 1)}px`; // Min 1px, max 5px
 
             svg.appendChild(line);
 
-            // Add weight label
+            // Add weight label dynamically (repositioned to avoid overlap)
             const midX = (startX + endX) / 2;
             const midY = (startY + endY) / 2;
             const weightLabel = document.createElement('div');
             weightLabel.classList.add('weight-label');
             weightLabel.innerText = conn.weight.toFixed(2);
             weightLabel.style.left = `${midX}px`;
-            weightLabel.style.top = `${midY}px`;
+            weightLabel.style.top = `${midY - 15}px`; // Adjust Y to be above the line
             elements.connectionsSVG.parentElement.appendChild(weightLabel);
         });
     }
@@ -538,7 +727,7 @@
 
     function updateSliderValues() {
         for (const key in elements.values) {
-            elements.values[key].innerText = elements.sliders[key].value;
+            elements.values[key].innerText = parseFloat(elements.sliders[key].value).toFixed(1);
         }
     }
 
@@ -551,6 +740,9 @@
         }
         elements.sliders.bias.value = defaultState.bias;
         elements.activationSelect.value = defaultState.activation;
+
+        // Ensure the state object is reset as well
+        Object.assign(state, JSON.parse(JSON.stringify(defaultState)));
 
         updateStateFromSliders();
     }
@@ -568,7 +760,8 @@
     // Initial calculation and drawing
     updateSliderValues();
     calculateForwardPropagation();
-    window.addEventListener('resize', calculateForwardPropagation);
+    // Redraw connections on window resize
+    window.addEventListener('resize', calculateForwardPropagation); 
 </script>
 
 </body>
