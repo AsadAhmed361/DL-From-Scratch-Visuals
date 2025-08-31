@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Neural Network: Study vs. Sleep</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #00aaff;
+            --accent-color: #ff5555;
+            --text-color: #e0e0e0;
+            --secondary-text-color: #a0a0a0;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            flex-wrap: wrap;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1000px;
+            gap: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .nn-visualization-panel {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            padding: 30px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .nn-graph {
+            width: 100%;
+            height: 400px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            position: relative;
+        }
+
+        .layer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .neuron {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
+            font-size: 14px;
+        }
+
+        .neuron-label {
+            position: absolute;
+            top: -25px;
+            color: var(--text-color);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .connections-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .connection {
+            position: absolute;
+            stroke: var(--secondary-text-color);
+            stroke-width: 2;
+            opacity: 0.7;
+            transition: stroke-width 0.3s ease, opacity 0.3s ease;
+        }
+
+        .connection.positive {
+            stroke: var(--primary-color);
+        }
+
+        .connection.negative {
+            stroke: var(--accent-color);
+        }
+
+        .weight-label {
+            position: absolute;
+            font-size: 12px;
+            color: var(--secondary-text-color);
+            background-color: var(--surface-color);
+            padding: 2px 5px;
+            border-radius: 5px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .output-label {
+            position: absolute;
+            bottom: -30px;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-color);
+            white-space: nowrap;
+        }
+
+        .controls-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-section {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            padding: 20px;
+        }
+
+        .panel-section h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .slider-group, .select-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 5px;
+            outline: none;
+            transition: opacity .2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 170, 255, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 170, 255, 0.8);
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: right;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #333;
+            color: var(--text-color);
+            border: 1px solid #555;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23e0e0e0%22%20d%3D%22M287%20163.7c-4.4%204.4-10.9%207-17.7%207H23.1c-6.8%200-13.3-2.7-17.7-7-4.4-4.4-7-10.9-7-17.7s2.7-13.3%207-17.7l116.5-116.5c4.4-4.4%2010.9-7%2017.7-7s13.3%202.7%2017.7%207l116.5%20116.5c4.4%204.4%207%2010.9%207%2017.7s-2.6%2013.3-7%2017.7z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 10px top 50%;
+            background-size: 12px;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .explanation-panel {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            padding: 20px;
+            grid-column: span 2;
+        }
+
+        .explanation-panel h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .explanation-panel p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .reset-btn {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .reset-btn:hover {
+            background-color: #ff3333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Simple Neuron: Study vs. Sleep 🧠</h1>
+    <div class="main-grid">
+        <div class="nn-visualization-panel">
+            <h2>Neuron Visualization</h2>
+            <div class="nn-graph">
+                <div class="layer input-layer">
+                    <div class="neuron" id="input-study"><span class="neuron-label">Study Hrs (x1)</span></div>
+                    <div class="neuron" id="input-sleep"><span class="neuron-label">Sleep Hrs (x2)</span></div>
+                </div>
+                <div class="layer output-layer">
+                    <div class="neuron" id="output-pass"></div>
+                </div>
+                <svg class="connections-container"></svg>
+            </div>
+            <div class="output-label" id="output-label">Pass Probability: 0.00%</div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="panel-section">
+                <h2>Input Values</h2>
+                <div class="slider-group">
+                    <label for="study-hours-slider">Study Hours (x1):</label>
+                    <div class="slider-container">
+                        <input type="range" id="study-hours-slider" min="0" max="10" step="0.1" value="5">
+                        <span class="slider-value" id="study-hours-value">5.0</span>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <label for="sleep-hours-slider">Sleep Hours (x2):</label>
+                    <div class="slider-container">
+                        <input type="range" id="sleep-hours-slider" min="0" max="10" step="0.1" value="7">
+                        <span class="slider-value" id="sleep-hours-value">7.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Weights & Bias</h2>
+                <div class="slider-group">
+                    <label for="w1-slider">Weight w1 (Study):</label>
+                    <div class="slider-container">
+                        <input type="range" id="w1-slider" min="-5" max="5" step="0.1" value="1.5">
+                        <span class="slider-value" id="w1-value">1.5</span>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <label for="w2-slider">Weight w2 (Sleep):</label>
+                    <div class="slider-container">
+                        <input type="range" id="w2-slider" min="-5" max="5" step="0.1" value="-0.8">
+                        <span class="slider-value" id="w2-value">-0.8</span>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <label for="bias-slider">Bias (b):</label>
+                    <div class="slider-container">
+                        <input type="range" id="bias-slider" min="-5" max="5" step="0.1" value="0.2">
+                        <span class="slider-value" id="bias-value">0.2</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Activation Function</h2>
+                <div class="select-group">
+                    <label for="activation-select">Activation Function:</label>
+                    <select id="activation-select">
+                        <option value="sigmoid" selected>Sigmoid</option>
+                        <option value="relu">ReLU</option>
+                        <option value="tanh">Tanh</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="reset-btn" id="reset-btn">Reset All Values</button>
+        </div>
+    </div>
+
+    <div class="explanation-panel">
+        <h2>How This Single Neuron Works</h2>
+        <p>This is a simplified version of a neural network, consisting of a single neuron. It demonstrates how a neuron takes multiple inputs, combines them, and produces a single output.</p>
+
+        <h3>Components Explained:</h3>
+        <ul>
+            <li>
+                <p><strong>Input Values (x1, x2):</strong> These are the raw data points we feed into the neuron: Study Hours and Sleep Hours. Their values are controlled by the sliders.</p>
+            </li>
+            <li>
+                <p><strong>Weights (w1, w2):</strong> Weights are numerical values that determine the **importance of each input**. A positive weight means the input contributes to a higher output, while a negative weight means it reduces the output. A larger magnitude means a stronger influence.</p>
+            </li>
+            <li>
+                <p><strong>Bias (b):</strong> The bias is an independent value added to the weighted sum of inputs. It allows the neuron to activate even if the inputs are all zero, giving the model more flexibility.</p>
+            </li>
+            <li>
+                <p><strong>Activation Function:</strong> This function takes the weighted sum of inputs plus the bias and determines the final output of the neuron. It introduces non-linearity, which is essential for learning complex relationships. You can select one of three common activation functions:
+                    <ul>
+                        <li><strong>Sigmoid:</strong> Maps the output to a probability between 0 and 1. Perfect for this "Pass Probability" scenario.</li>
+                        <li><strong>ReLU (Rectified Linear Unit):</strong> Outputs the input value if it's positive, and zero otherwise. Simple and computationally efficient.</li>
+                        <li><strong>Tanh (Hyperbolic Tangent):</strong> Maps the output to a range between -1 and 1.</li>
+                    </ul>
+                </p>
+            </li>
+            <li>
+                <p><strong>Output:</strong> The final result of the neuron's calculation. In this case, it's the Pass Probability, a single value representing the likelihood of passing the exam.</p>
+            </li>
+        </ul>
+
+        <p>The calculation is straightforward:
+        `Output = Activation Function((x1 * w1) + (x2 * w2) + b)`</p>
+        <p>Adjust the sliders to see how each parameter instantly affects the final output!</p>
+    </div>
+</div>
+
+<script>
+    const state = {
+        inputs: { study: 5, sleep: 7 },
+        weights: { w1: 1.5, w2: -0.8 },
+        bias: 0.2,
+        activation: 'sigmoid',
+    };
+
+    const defaultState = JSON.parse(JSON.stringify(state)); // Deep copy for reset
+
+    const elements = {
+        sliders: {
+            study: document.getElementById('study-hours-slider'),
+            sleep: document.getElementById('sleep-hours-slider'),
+            w1: document.getElementById('w1-slider'),
+            w2: document.getElementById('w2-slider'),
+            bias: document.getElementById('bias-slider')
+        },
+        values: {
+            study: document.getElementById('study-hours-value'),
+            sleep: document.getElementById('sleep-hours-value'),
+            w1: document.getElementById('w1-value'),
+            w2: document.getElementById('w2-value'),
+            bias: document.getElementById('bias-value')
+        },
+        neurons: {
+            inputStudy: document.getElementById('input-study'),
+            inputSleep: document.getElementById('input-sleep'),
+            outputPass: document.getElementById('output-pass')
+        },
+        activationSelect: document.getElementById('activation-select'),
+        outputLabel: document.getElementById('output-label'),
+        connectionsSVG: document.querySelector('.connections-container'),
+        resetBtn: document.getElementById('reset-btn')
+    };
+
+    // Helper functions for activation
+    const activationFunctions = {
+        sigmoid: x => 1 / (1 + Math.exp(-x)),
+        relu: x => Math.max(0, x),
+        tanh: x => Math.tanh(x)
+    };
+
+    function calculateForwardPropagation() {
+        const { inputs, weights, bias, activation } = state;
+        const { study, sleep } = inputs;
+        const { w1, w2 } = weights;
+
+        // Normalize inputs for better visualization
+        const studyNormalized = study / 10;
+        const sleepNormalized = sleep / 10;
+
+        // Update input neuron color and text
+        elements.neurons.inputStudy.style.backgroundColor = `hsl(210, 80%, ${30 + studyNormalized * 40}%)`;
+        elements.neurons.inputSleep.style.backgroundColor = `hsl(210, 80%, ${30 + sleepNormalized * 40}%)`;
+        elements.neurons.inputStudy.innerText = study.toFixed(1);
+        elements.neurons.inputSleep.innerText = sleep.toFixed(1);
+
+        // Calculate the weighted sum
+        const z = (studyNormalized * w1) + (sleepNormalized * w2) + bias;
+
+        // Apply activation function
+        const activationFunc = activationFunctions[activation];
+        const outputProbability = activationFunc(z);
+
+        // Update output neuron color and text
+        const outputIntensity = outputProbability;
+        elements.neurons.outputPass.style.backgroundColor = `hsl(210, 80%, ${20 + outputIntensity * 60}%)`;
+        elements.neurons.outputPass.innerText = outputProbability.toFixed(2);
+
+        // Update output label
+        elements.outputLabel.innerText = `Pass Probability: ${(outputProbability * 100).toFixed(2)}%`;
+
+        drawConnections();
+    }
+
+    function drawConnections() {
+        elements.connectionsSVG.innerHTML = ''; // Clear previous connections
+        const svg = elements.connectionsSVG;
+        const neuronMap = {
+            inputStudy: elements.neurons.inputStudy,
+            inputSleep: elements.neurons.inputSleep,
+            outputPass: elements.neurons.outputPass
+        };
+        const weights = state.weights;
+        const connections = [
+            { from: 'inputStudy', to: 'outputPass', weight: weights.w1 },
+            { from: 'inputSleep', to: 'outputPass', weight: weights.w2 },
+        ];
+
+        connections.forEach(conn => {
+            const startNeuron = neuronMap[conn.from];
+            const endNeuron = neuronMap[conn.to];
+            const startRect = startNeuron.getBoundingClientRect();
+            const endRect = endNeuron.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
+
+            const startX = startRect.right - svgRect.left - 5;
+            const startY = startRect.top + startRect.height / 2 - svgRect.top;
+            const endX = endRect.left - svgRect.left + 5;
+            const endY = endRect.top + endRect.height / 2 - svgRect.top;
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', startX);
+            line.setAttribute('y1', startY);
+            line.setAttribute('x2', endX);
+            line.setAttribute('y2', endY);
+            line.classList.add('connection');
+            if (conn.weight > 0) {
+                line.classList.add('positive');
+            } else {
+                line.classList.add('negative');
+            }
+            line.style.opacity = Math.min(1, Math.abs(conn.weight) / 5 + 0.3);
+            line.style.strokeWidth = Math.min(5, Math.abs(conn.weight) / 2 + 1);
+
+            svg.appendChild(line);
+
+            // Add weight label
+            const midX = (startX + endX) / 2;
+            const midY = (startY + endY) / 2;
+            const weightLabel = document.createElement('div');
+            weightLabel.classList.add('weight-label');
+            weightLabel.innerText = conn.weight.toFixed(2);
+            weightLabel.style.left = `${midX}px`;
+            weightLabel.style.top = `${midY}px`;
+            elements.connectionsSVG.parentElement.appendChild(weightLabel);
+        });
+    }
+
+    function updateStateFromSliders() {
+        state.inputs.study = parseFloat(elements.sliders.study.value);
+        state.inputs.sleep = parseFloat(elements.sliders.sleep.value);
+        state.weights.w1 = parseFloat(elements.sliders.w1.value);
+        state.weights.w2 = parseFloat(elements.sliders.w2.value);
+        state.bias = parseFloat(elements.sliders.bias.value);
+
+        updateSliderValues();
+        calculateForwardPropagation();
+    }
+
+    function updateSliderValues() {
+        for (const key in elements.values) {
+            elements.values[key].innerText = elements.sliders[key].value;
+        }
+    }
+
+    function resetNetwork() {
+        for (const key in defaultState.inputs) {
+            elements.sliders[key].value = defaultState.inputs[key];
+        }
+        for (const key in defaultState.weights) {
+            elements.sliders[key].value = defaultState.weights[key];
+        }
+        elements.sliders.bias.value = defaultState.bias;
+        elements.activationSelect.value = defaultState.activation;
+
+        updateStateFromSliders();
+    }
+
+    // Event Listeners
+    for (const key in elements.sliders) {
+        elements.sliders[key].addEventListener('input', updateStateFromSliders);
+    }
+    elements.activationSelect.addEventListener('change', () => {
+        state.activation = elements.activationSelect.value;
+        calculateForwardPropagation();
+    });
+    elements.resetBtn.addEventListener('click', resetNetwork);
+
+    // Initial calculation and drawing
+    updateSliderValues();
+    calculateForwardPropagation();
+    window.addEventListener('resize', calculateForwardPropagation);
+</script>
+
+</body>
+</html>
