@@ -1,12 +1,12 @@
 # Lesson 2: Visualizing Backpropagation & Gradient Descent
 
-<img width="903" height="638" alt="image" src="https://github.com/user-attachments/assets/3913e830-0844-4be0-aa65-ce78d1b31487" />
 
 
 This project is an **interactive web application** designed to visualize the core concepts of **backpropagation** and **gradient descent** in a simple neural network.  
 It serves as an **educational tool** to make these abstract machine learning algorithms more intuitive and understandable.
 
 ---
+<img width="903" height="638" alt="image" src="https://github.com/user-attachments/assets/3913e830-0844-4be0-aa65-ce78d1b31487" />
 
 ## Features
 
