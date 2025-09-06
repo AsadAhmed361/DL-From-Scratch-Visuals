@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backpropagation & Gradient Descent</title>
+	<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Orbitron:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #0d1a26;
+            --surface-color: #1a2a3a;
+            --primary-color: #00aaff;
+            --accent-color: #ff6b6b;
+            --text-color: #e0e0e0;
+            --secondary-text-color: #a0a0a0;
+            --shadow-color: rgba(0, 0, 0, 0.6);
+            --border-radius: 8px;
+            --gradient-start: #1a2a3a;
+            --gradient-end: #2a3d50;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-color), #09121a);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            flex-wrap: wrap;
+            line-height: 1.5;
+            background-attachment: fixed;
+            font-size: 14px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1200px;
+            gap: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin: 10px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(0, 170, 255, 0.7);
+            letter-spacing: 1px;
+            font-size: 24px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+        
+        .visualization-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 992px) {
+            .visualization-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .visualization-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .nn-visualization-panel, .controls-panel, .explanation-panel, .dataset-panel, .gd-panel {
+            background: linear-gradient(145deg, var(--gradient-start), var(--gradient-end));
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 20px var(--shadow-color);
+            padding: 20px;
+            border: 1px solid rgba(0, 170, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .explanation-panel {
+            grid-column: span 2;
+        }
+
+        h2 {
+            margin: 0;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--primary-color);
+            padding-bottom: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
+            text-shadow: 0 0 5px rgba(0, 170, 255, 0.5);
+            font-size: 18px;
+        }
+        
+        .nn-graph {
+            width: 100%;
+            height: 300px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            position: relative;
+        }
+
+        .layer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            position: relative;
+        }
+
+        .layer-label {
+            position: absolute;
+            top: -20px;
+            color: var(--primary-color);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            text-shadow: 0 0 5px rgba(0, 170, 255, 0.7);
+            white-space: nowrap;
+        }
+        
+        .neuron {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-color);
+            background-color: rgba(0, 170, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            transition: all 0.4s ease;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0, 170, 255, 0.7);
+            font-size: 14px;
+            color: var(--text-color);
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+        }
+        
+        .neuron-label {
+            font-size: 11px;
+            line-height: 1.2;
+            text-align: center;
+        }
+        .neuron-value {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+        .bias-label {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 10px;
+            color: #ccc;
+            opacity: 0.8;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .bias-label:hover {
+            color: #fff;
+            opacity: 1;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 15px var(--shadow-color);
+            font-size: 12px;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translate(-50%, -10px);
+            white-space: nowrap;
+        }
+        .tooltip.visible {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        .connections-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .connection {
+            stroke-width: 1.5px;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+            pointer-events: all;
+            cursor: pointer;
+            fill: none;
+        }
+        
+        .connection.positive {
+            stroke: var(--primary-color);
+            opacity: 0.7;
+        }
+        .connection.negative {
+            stroke: var(--accent-color);
+            opacity: 0.7;
+        }
+
+        .connection.highlight-forward {
+            stroke-width: 4px;
+            opacity: 1;
+            animation: pulse-forward 1.2s infinite;
+        }
+        .connection.highlight-backward {
+            stroke-width: 4px;
+            opacity: 1;
+            animation: pulse-backward 1.2s infinite;
+            stroke: var(--accent-color);
+        }
+
+        @keyframes pulse-forward {
+            0%, 100% { stroke: var(--primary-color); }
+            50% { stroke: #e0f2fe; }
+        }
+        @keyframes pulse-backward {
+            0%, 100% { stroke: var(--accent-color); }
+            50% { stroke: #fde4e4; }
+        }
+        
+        .weight-label, .gradient-label {
+            font-size: 10px;
+            padding: 2px 4px;
+            background-color: var(--surface-color);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            position: absolute;
+            white-space: nowrap;
+        }
+        .weight-label.visible, .gradient-label.visible { opacity: 1; }
+        .gradient-label { color: var(--accent-color); }
+
+        .output-panel, .error-panel {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.2em;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .error-panel {
+            color: var(--accent-color);
+            margin-top: 5px;
+        }
+        .gd-panel canvas {
+            width: 100%;
+            height: 250px;
+            border: 1px solid rgba(0, 170, 255, 0.2);
+            border-radius: var(--border-radius);
+            background-color: #112233;
+            box-shadow: inset 0 0 10px rgba(0, 170, 255, 0.2);
+        }
+        .controls-panel {
+            gap: 15px;
+        }
+        
+        .slider-group, .input-group, .control-buttons, .training-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="range"] {
+            height: 8px;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            font-size: 1em;
+            padding: 4px 8px;
+        }
+
+        .dataset-panel h3 {
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+        .dataset-points {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .data-point {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #4a5d6c;
+            border: 2px solid var(--primary-color);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+        .data-point:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+        .data-point.active {
+            box-shadow: 0 0 15px var(--primary-color);
+            transform: scale(1.2);
+            border-color: #fff;
+        }
+        .data-point-tooltip {
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: var(--border-radius);
+            white-space: nowrap;
+            font-size: 12px;
+            display: none;
+        }
+        .data-point:hover .data-point-tooltip {
+            display: block;
+        }
+
+        .control-buttons {
+            flex-direction: row;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .control-buttons button, select, input[type="number"] {
+            padding: 10px 15px;
+            font-size: 1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+        }
+        .control-buttons button:hover, select:hover, input[type="number"]:hover {
+            transform: translateY(-2px);
+        }
+        .train-btn {
+            background-color: var(--primary-color);
+            color: var(--surface-color);
+        }
+        .reset-btn {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+        }
+
+        .training-controls {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--secondary-text-color);
+            gap: 10px;
+        }
+        
+        .explanation-panel h3 {
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--secondary-text-color);
+            padding-bottom: 4px;
+            color: var(--text-color);
+        }
+        .explanation-panel p, .explanation-panel ul {
+            font-size: 13px;
+        }
+
+        code {
+            font-size: 0.8em;
+            padding: 1px 4px;
+            background-color: #2a3d50;
+            color: var(--primary-color);
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .step-heading {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Backpropagation & Gradient Descent</h1>
+    <div class="main-grid">
+        <div class="nn-visualization-panel">
+            <h2>Neural Network Model</h2>
+            <div class="nn-graph">
+                <div class="layer input-layer">
+                    <span class="layer-label">Input Layer</span>
+                    <div class="neuron" id="input-study" data-tooltip-id="study-tooltip">
+                        <span class="neuron-label">Study Hrs</span>
+                        <span class="neuron-value" id="input-study-val"></span>
+                        <div class="tooltip" id="study-tooltip"></div>
+                    </div>
+                    <div class="neuron" id="input-sleep" data-tooltip-id="sleep-tooltip">
+                        <span class="neuron-label">Sleep Hrs</span>
+                        <span class="neuron-value" id="input-sleep-val"></span>
+                        <div class="tooltip" id="sleep-tooltip"></div>
+                    </div>
+                </div>
+                <div class="layer hidden-layer">
+                    <span class="layer-label">Hidden Layer</span>
+                    <div class="neuron" id="hidden-h1" data-tooltip-id="h1-tooltip">
+                        <span class="neuron-label">Hidden 1</span>
+                        <span class="neuron-value" id="hidden-h1-val"></span>
+                        <div class="bias-label" data-tooltip-id="b1-tooltip">b</div>
+                        <div class="tooltip" id="h1-tooltip"></div>
+                        <div class="tooltip" id="b1-tooltip"></div>
+                    </div>
+                    <div class="neuron" id="hidden-h2" data-tooltip-id="h2-tooltip">
+                        <span class="neuron-label">Hidden 2</span>
+                        <span class="neuron-value" id="hidden-h2-val"></span>
+                        <div class="bias-label" data-tooltip-id="b2-tooltip">b</div>
+                        <div class="tooltip" id="h2-tooltip"></div>
+                        <div class="tooltip" id="b2-tooltip"></div>
+                    </div>
+                </div>
+                <div class="layer output-layer">
+                    <span class="layer-label">Output Layer</span>
+                    <div class="neuron" id="output-pass" data-tooltip-id="pass-tooltip">
+                        <span class="neuron-label">Pass Prob</span>
+                        <span class="neuron-value" id="output-pass-val"></span>
+                        <div class="bias-label" data-tooltip-id="bo-tooltip">b</div>
+                        <div class="tooltip" id="pass-tooltip"></div>
+                        <div class="tooltip" id="bo-tooltip"></div>
+                    </div>
+                </div>
+                <svg class="connections-container"></svg>
+            </div>
+            <div class="output-panel">Predicted Probability: <span id="predicted-prob">0.00%</span></div>
+            <div class="error-panel">Error: <span id="error-value">0.000</span></div>
+            <div id="epoch-status" style="text-align: center; font-style: italic; color: var(--secondary-text-color); margin-top: 10px;">Epoch: 0</div>
+			<div class="gd-panel">
+            <h2>Gradient Descent Visualization</h2>
+            <canvas id="gd-canvas"></canvas>
+        </div>
+        </div>
+        
+        <div class="controls-panel">
+            <h2>Training Controls</h2>
+            <div class="slider-group">
+                <label for="study-hours-slider">Study Hours:</label>
+                <div class="slider-container">
+                    <input type="range" id="study-hours-slider" min="0" max="10" step="0.1" value="5">
+                    <span class="slider-value" id="study-hours-value">5.0</span>
+                </div>
+            </div>
+            <div class="slider-group">
+                <label for="sleep-hours-slider">Sleep Hours:</label>
+                <div class="slider-container">
+                    <input type="range" id="sleep-hours-slider" min="0" max="10" step="0.1" value="7">
+                    <span class="slider-value" id="sleep-hours-value">7.0</span>
+                </div>
+            </div>
+            <div class="dataset-panel">
+                <h3>Select a Data Point</h3>
+                <div class="dataset-points" id="dataset-container">
+                    <!-- Data points will be injected here by JavaScript -->
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="activation-select">Hidden Layer Activation:</label>
+                <select id="activation-select">
+                    <option value="sigmoid" selected>Sigmoid</option>
+                    <option value="relu">ReLU</option>
+                    <option value="tanh">Tanh</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="learning-rate-input">Learning Rate:</label>
+                <input type="number" id="learning-rate-input" min="0.001" max="1" step="0.001" value="0.5">
+            </div>
+            <div class="control-buttons">
+                <button id="single-step-btn" class="train-btn">Run Single Step</button>
+                <button class="reset-btn" id="reset-btn">Reset Network</button>
+            </div>
+            <div class="training-controls">
+                <h3>Automated Training</h3>
+                <div class="input-group">
+                    <label for="epochs-input">Number of Epochs:</label>
+                    <input type="number" id="epochs-input" min="1" step="1" value="100">
+                </div>
+                <button id="start-training-btn" class="train-btn">Start Training</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="visualization-grid">
+        
+		
+    <div class="explanation-panel">
+  <h2>📘 Neural Networks — A Beginner’s Guide</h2>
+  <p>
+    This notebook bridges the gap between abstract math and interactive visualization. 
+    Each section introduces a core idea, connects it to real-life intuition, and shows the formula behind it.
+  </p>
+
+  <section>
+    <h3>1️⃣ Neural Network</h3>
+    <p>
+      A Neural Network is like a <strong>mini-brain</strong>. It learns patterns by combining inputs, 
+      adjusting their importance, and producing an output.
+    </p>
+    <p class="formula">
+      \[
+      y = f(Wx + b)
+      \]
+    </p>
+    <p><em>Think of it as a calculator that learns its own rules!</em></p>
+  </section>
+
+  <section>
+    <h3>2️⃣ Input Layer</h3>
+    <p>
+      The entry point of data. Each neuron here holds one feature value 
+      (like <em>Study Hours</em>, <em>Sleep Hours</em>).
+    </p>
+    <p class="formula">
+      \[
+      X = [x_1, x_2, \dots, x_n]
+      \]
+    </p>
+    <p><em>It’s like filling out a form — each box = one feature.</em></p>
+  </section>
+
+  <section>
+    <h3>3️⃣ Hidden Layers</h3>
+    <p>
+      Hidden layers are the <strong>workers</strong> extracting patterns nobody can see in raw input.
+    </p>
+    <p class="formula">
+      \[
+      z^{(l)} = W^{(l)}a^{(l-1)} + b^{(l)}, \quad 
+      a^{(l)} = f(z^{(l)})
+      \]
+    </p>
+    <p><em>Like chefs mixing ingredients into something meaningful.</em></p>
+  </section>
+
+  <section>
+    <h3>4️⃣ Output Layer</h3>
+    <p>
+      The network’s final decision. For binary problems (Pass/Fail), 
+      we use <strong>Sigmoid</strong> to output probabilities.
+    </p>
+    <p class="formula">
+      \[
+      \hat{y} = \frac{1}{1 + e^{-z}}
+      \]
+    </p>
+    <p><em>Green neuron in the visualization = high pass probability.</em></p>
+  </section>
+
+  <section>
+    <h3>5️⃣ Weights</h3>
+    <p>
+      Weights decide <strong>how important</strong> each input is. 
+      Larger weight = stronger influence.
+    </p>
+    <p class="formula">
+      \[
+      z = \sum_{i=1}^{n} w_i x_i
+      \]
+    </p>
+    <p><em>In the visualization: thick blue/red lines are weights.</em></p>
+  </section>
+
+  <section>
+    <h3>6️⃣ Bias</h3>
+    <p>
+      Bias is a <strong>shift factor</strong>. It allows neurons to activate even when inputs are zero.
+    </p>
+    <p class="formula">
+      \[
+      z = \sum_{i=1}^{n} w_i x_i + b
+      \]
+    </p>
+    <p><em>In the visualization: the little <code>b</code> icon next to each neuron.</em></p>
+  </section>
+
+  <section>
+    <h3>7️⃣ Activation Functions</h3>
+    <p>
+      They add <strong>non-linearity</strong>, helping networks learn complex relationships.
+    </p>
+    <p class="formula">
+      \[
+      \sigma(z) = \frac{1}{1 + e^{-z}}, \quad 
+      \tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}, \quad 
+      ReLU(z) = \max(0, z)
+      \]
+    </p>
+    <p><em>In the visualization: you can switch between sigmoid, tanh, ReLU.</em></p>
+  </section>
+
+  <section>
+    <h3>8️⃣ Error (Loss)</h3>
+    <p>
+      Error measures <strong>how wrong</strong> the prediction is. 
+      The smaller it gets, the smarter the network becomes.
+    </p>
+    <p class="formula">
+      \[
+      L_{MSE} = \frac{1}{n}\sum (y - \hat{y})^2
+      \]  
+      \[
+      L_{CE} = -\frac{1}{n}\sum \Big[ y \log(\hat{y}) + (1-y)\log(1-\hat{y}) \Big]
+      \]
+    </p>
+    <p><em>In the gradient descent plot: Y-axis = error value.</em></p>
+  </section>
+
+  <section>
+    <h3>9️⃣ Backpropagation</h3>
+    <p>
+      Like a <strong>teacher correcting homework</strong>. The error travels backward, 
+      telling each weight how much to change.
+    </p>
+    <p class="formula">
+      \[
+      \frac{\partial L}{\partial W^{(l)}} = 
+      \frac{\partial L}{\partial a^{(l)}} \cdot 
+      \frac{\partial a^{(l)}}{\partial z^{(l)}} \cdot 
+      \frac{\partial z^{(l)}}{\partial W^{(l)}}
+      \]
+    </p>
+    <p><em>In the visualization: gradients (grad) appear on connections during training.</em></p>
+  </section>
+
+  <section>
+    <h3>🔟 Gradient Descent</h3>
+    <p>
+      Gradient descent is like <strong>walking downhill</strong> 
+      to reach the lowest error point (valley).
+    </p>
+    <p class="formula">
+      \[
+      W := W - \eta \frac{\partial L}{\partial W}, \quad 
+      b := b - \eta \frac{\partial L}{\partial b}
+      \]
+    </p>
+    <p><em>In the plot: the white dot walks downhill as error reduces.</em></p>
+  </section>
+
+  <section>
+    <h3>1️⃣1️⃣ Learning Rate</h3>
+    <p>
+      The learning rate (\(\eta\)) is the <strong>step size</strong>.  
+      - Too high → unstable learning (overshooting).  
+      - Too low → painfully slow learning.  
+    </p>
+    <p><em>It’s like choosing how big each step is while walking down a mountain.</em></p>
+  </section>
+</div>
+   </div>
+</div>
+
+<script>
+    /**
+     * Generates a dataset for a neural network, where passing is correlated with
+     * higher study and sleep hours. Noise is added to make the problem non-linear.
+     */
+    function generateDataset(size) {
+        const dataset = [];
+        const minStudy = 1;
+        const maxStudy = 10;
+        const minSleep = 1;
+        const maxSleep = 10;
+        const noiseFactor = 0.3;
+
+        for (let i = 0; i < size; i++) {
+            const study = Math.random() * (maxStudy - minStudy) + minStudy;
+            const sleep = Math.random() * (maxSleep - minSleep) + minSleep;
+
+            // A simple linear boundary with noise
+            const rawScore = (study / maxStudy + sleep / maxSleep) / 2;
+            const noisyScore = rawScore + (Math.random() - 0.5) * noiseFactor;
+            const target = noisyScore > 0.5 ? 1 : 0;
+
+            dataset.push({
+                study: parseFloat(study.toFixed(1)),
+                sleep: parseFloat(sleep.toFixed(1)),
+                target,
+                label: target === 1 ? "Pass" : "Fail"
+            });
+        }
+
+        return dataset;
+    }
+
+    const dataset = generateDataset(120);
+    const costHistory = [];
+
+    const state = {
+        inputs: { study: 5, sleep: 7 },
+        target: 1,
+        learningRate: 0.5,
+        activation: 'sigmoid',
+        hidden: { h1: 0, h2: 0 },
+        output: { o1: 0 },
+        weights: {
+            w11: 1.0, w21: -0.5,
+            w12: -1.0, w22: 1.5,
+            wo1: 2.0, wo2: 1.0
+        },
+        biases: { b1: 0.5, b2: -0.2, bo: 0.0 },
+        epoch: 0
+    };
+
+    const defaultState = JSON.parse(JSON.stringify(state));
+
+    const elements = {
+        sliders: {
+            study: document.getElementById('study-hours-slider'),
+            sleep: document.getElementById('sleep-hours-slider'),
+        },
+        values: {
+            study: document.getElementById('study-hours-value'),
+            sleep: document.getElementById('sleep-hours-value'),
+        },
+        inputs: {
+            epochs: document.getElementById('epochs-input'),
+            learningRate: document.getElementById('learning-rate-input'),
+            activationSelect: document.getElementById('activation-select'),
+            datasetContainer: document.getElementById('dataset-container'),
+        },
+        neurons: {
+            inputStudy: document.getElementById('input-study'),
+            inputSleep: document.getElementById('input-sleep'),
+            hiddenH1: document.getElementById('hidden-h1'),
+            hiddenH2: document.getElementById('hidden-h2'),
+            outputPass: document.getElementById('output-pass')
+        },
+        neuronValues: {
+            inputStudy: document.getElementById('input-study-val'),
+            inputSleep: document.getElementById('input-sleep-val'),
+            hiddenH1: document.getElementById('hidden-h1-val'),
+            hiddenH2: document.getElementById('hidden-h2-val'),
+            outputPass: document.getElementById('output-pass-val')
+        },
+        tooltips: {
+            study: document.getElementById('study-tooltip'),
+            sleep: document.getElementById('sleep-tooltip'),
+            h1: document.getElementById('h1-tooltip'),
+            h2: document.getElementById('h2-tooltip'),
+            pass: document.getElementById('pass-tooltip'),
+            b1: document.getElementById('b1-tooltip'),
+            b2: document.getElementById('b2-tooltip'),
+            bo: document.getElementById('bo-tooltip'),
+        },
+        predictedProb: document.getElementById('predicted-prob'),
+        errorValue: document.getElementById('error-value'),
+        connectionsSVG: document.querySelector('.connections-container'),
+        singleStepBtn: document.getElementById('single-step-btn'),
+        startTrainingBtn: document.getElementById('start-training-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        epochStatus: document.getElementById('epoch-status'),
+        gdCanvas: document.getElementById('gd-canvas')
+    };
+    
+    const ctx = elements.gdCanvas.getContext('2d');
+    
+    const activationFunctions = {
+        sigmoid: x => 1 / (1 + Math.exp(-x)),
+        sigmoidDerivative: x => {
+            const sigmoidX = activationFunctions.sigmoid(x);
+            return sigmoidX * (1 - sigmoidX);
+        },
+        relu: x => Math.max(0, x),
+        reluDerivative: x => (x > 0 ? 1 : 0),
+        tanh: x => Math.tanh(x),
+        tanhDerivative: x => 1 - Math.pow(Math.tanh(x), 2)
+    };
+    
+    const activationSums = { z1: 0, z2: 0, zo: 0 };
+    let trainingLoopInterval = null;
+
+    function renderDataset() {
+        elements.inputs.datasetContainer.innerHTML = '';
+        // Render only the first 10 points for visual selection
+        const smallDataset = dataset.slice(0, 10); 
+        smallDataset.forEach((data, index) => {
+            const point = document.createElement('div');
+            point.classList.add('data-point');
+            point.dataset.index = index;
+            point.style.backgroundColor = data.target === 1 ? '#00cc66' : '#ff3333';
+            
+            const tooltip = document.createElement('div');
+            tooltip.classList.add('data-point-tooltip');
+            tooltip.innerHTML = `**${data.label}**<br>Study: ${data.study}<br>Sleep: ${data.sleep}<br>Target: ${data.target}`;
+            point.appendChild(tooltip);
+
+            point.addEventListener('click', () => {
+                state.inputs.study = data.study;
+                state.inputs.sleep = data.sleep;
+                state.target = data.target;
+                elements.sliders.study.value = data.study;
+                elements.sliders.sleep.value = data.sleep;
+                updateUI();
+                document.querySelectorAll('.data-point').forEach(p => p.classList.remove('active'));
+                point.classList.add('active');
+            });
+            elements.inputs.datasetContainer.appendChild(point);
+        });
+    }
+    
+    // --- Tooltip Logic ---
+    function setupTooltips() {
+        document.querySelectorAll('[data-tooltip-id]').forEach(element => {
+            const tooltipId = element.dataset.tooltipId;
+            const tooltip = document.getElementById(tooltipId);
+            if (!tooltip) return;
+
+            element.addEventListener('mouseenter', () => {
+                tooltip.classList.add('visible');
+            });
+            element.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+            element.addEventListener('mousemove', (e) => {
+                const rect = element.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                tooltip.style.left = `${x}px`;
+                tooltip.style.top = `${y}px`;
+            });
+        });
+    }
+    
+    function updateNeuronTooltips() {
+        const studyNormalized = state.inputs.study / 10;
+        const sleepNormalized = state.inputs.sleep / 10;
+        const hiddenActivation = elements.inputs.activationSelect.value;
+        
+        elements.tooltips.study.innerHTML = `This is an input neuron representing the student's study hours. <br>Normalized Value: ${studyNormalized.toFixed(2)}`;
+        elements.tooltips.sleep.innerHTML = `This is an input neuron representing the student's sleep hours. <br>Normalized Value: ${sleepNormalized.toFixed(2)}`;
+        
+        elements.tooltips.h1.innerHTML = `This is a hidden neuron. It receives input from the study and sleep neurons. <br>Raw Sum: ${activationSums.z1.toFixed(2)}<br>Activation Function: ${hiddenActivation}`;
+        elements.tooltips.h2.innerHTML = `This is a hidden neuron. It receives input from the study and sleep neurons. <br>Raw Sum: ${activationSums.z2.toFixed(2)}<br>Activation Function: ${hiddenActivation}`;
+
+        elements.tooltips.pass.innerHTML = `This is the output neuron. Its value is the final prediction of the neural network. <br>Raw Sum: ${activationSums.zo.toFixed(2)}<br>Activation Function: Sigmoid`;
+    
+        elements.tooltips.b1.innerHTML = `The bias for Hidden Neuron 1. <br>Current Value: ${state.biases.b1.toFixed(2)}`;
+        elements.tooltips.b2.innerHTML = `The bias for Hidden Neuron 2. <br>Current Value: ${state.biases.b2.toFixed(2)}`;
+        elements.tooltips.bo.innerHTML = `The bias for the Output Neuron. <br>Current Value: ${state.biases.bo.toFixed(2)}`;
+    }
+    
+    function updateUI() {
+        elements.values.study.innerText = state.inputs.study.toFixed(1);
+        elements.values.sleep.innerText = state.inputs.sleep.toFixed(1);
+
+        elements.neuronValues.inputStudy.innerText = (state.inputs.study / 10).toFixed(1);
+        elements.neuronValues.inputSleep.innerText = (state.inputs.sleep / 10).toFixed(1);
+
+        elements.neuronValues.hiddenH1.innerText = state.hidden.h1.toFixed(2);
+        elements.neuronValues.hiddenH2.innerText = state.hidden.h2.toFixed(2);
+        
+        elements.neuronValues.outputPass.innerText = state.output.o1.toFixed(2);
+        elements.predictedProb.innerText = (state.output.o1 * 100).toFixed(2) + '%';
+        
+        const error = ((state.target - state.output.o1) ** 2 / 2);
+        elements.errorValue.innerText = error.toFixed(4);
+        costHistory.push(error);
+
+        elements.neurons.hiddenH1.style.backgroundColor = `hsl(210, 70%, ${20 + (Math.abs(state.hidden.h1 / 1.5) * 50)}%)`;
+        elements.neurons.hiddenH2.style.backgroundColor = `hsl(210, 70%, ${20 + (Math.abs(state.hidden.h2 / 1.5) * 50)}%)`;
+        elements.neurons.outputPass.style.backgroundColor = `hsl(${120 * state.output.o1}, 70%, ${20 + (state.output.o1 * 50)}%)`;
+        
+        updateNeuronTooltips();
+        drawConnections();
+        drawGradientDescent();
+    }
+    
+    function drawConnections(highlightType = null, gradients = {}) {
+        elements.connectionsSVG.innerHTML = '';
+        document.querySelectorAll('.weight-label, .gradient-label').forEach(label => label.remove());
+
+        const svg = elements.connectionsSVG;
+        const neuronMap = {
+            inputStudy: elements.neurons.inputStudy,
+            inputSleep: elements.neurons.inputSleep,
+            hiddenH1: elements.neurons.hiddenH1,
+            hiddenH2: elements.neurons.hiddenH2,
+            outputPass: elements.neurons.outputPass
+        };
+
+        const connections = [
+            { from: 'inputStudy', to: 'hiddenH1', weight: state.weights.w11, grad: gradients.dLoss_dw11 },
+            { from: 'inputSleep', to: 'hiddenH1', weight: state.weights.w21, grad: gradients.dLoss_dw21 },
+            { from: 'inputStudy', to: 'hiddenH2', weight: state.weights.w12, grad: gradients.dLoss_dw12 },
+            { from: 'inputSleep', to: 'hiddenH2', weight: state.weights.w22, grad: gradients.dLoss_dw22 },
+            { from: 'hiddenH1', to: 'outputPass', weight: state.weights.wo1, grad: gradients.dLoss_dWo1 },
+            { from: 'hiddenH2', to: 'outputPass', weight: state.weights.wo2, grad: gradients.dLoss_dWo2 },
+        ];
+
+        connections.forEach(conn => {
+            const startNeuron = neuronMap[conn.from];
+            const endNeuron = neuronMap[conn.to];
+            const startRect = startNeuron.getBoundingClientRect();
+            const endRect = endNeuron.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
+
+            const startX = startRect.right - svgRect.left - 5;
+            const startY = startRect.top + startRect.height / 2 - svgRect.top;
+            const endX = endRect.left - svgRect.left + 5;
+            const endY = endRect.top + endRect.height / 2 - svgRect.top;
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', startX);
+            line.setAttribute('y1', startY);
+            line.setAttribute('x2', endX);
+            line.setAttribute('y2', endY);
+            line.classList.add('connection');
+            if (highlightType === 'forward') {
+                line.classList.add('highlight-forward');
+            } else if (highlightType === 'backward') {
+                line.classList.add('highlight-backward');
+            }
+            if (conn.weight > 0) {
+                line.classList.add('positive');
+            } else if (conn.weight < 0) {
+                line.classList.add('negative');
+            }
+            line.style.opacity = Math.min(1, Math.abs(conn.weight) / 5 + 0.3);
+            line.style.strokeWidth = `${Math.min(5, Math.abs(conn.weight) / 1.5 + 1)}px`;
+            svg.appendChild(line);
+
+            // Add tooltip for weight
+            const midX = (startX + endX) / 2;
+            const midY = (startY + endY) / 2;
+            const weightLabel = document.createElement('div');
+            weightLabel.classList.add('weight-label', 'visible');
+            weightLabel.innerText = conn.weight.toFixed(2);
+            weightLabel.style.left = `${midX}px`;
+            weightLabel.style.top = `${midY - 15}px`;
+            elements.connectionsSVG.parentElement.appendChild(weightLabel);
+            
+            if (conn.grad !== undefined && highlightType === 'backward') {
+                const gradLabel = document.createElement('div');
+                gradLabel.classList.add('gradient-label', 'visible');
+                gradLabel.innerText = `grad: ${conn.grad.toFixed(3)}`;
+                gradLabel.style.left = `${midX}px`;
+                gradLabel.style.top = `${midY + 5}px`;
+                elements.connectionsSVG.parentElement.appendChild(gradLabel);
+            }
+        });
+    }
+
+    function forwardPass() {
+        const { inputs, weights, biases, activation } = state;
+        const studyNormalized = inputs.study / 10;
+        const sleepNormalized = inputs.sleep / 10;
+        const hiddenActivation = activationFunctions[activation];
+        
+        // Hidden Layer
+        activationSums.z1 = (studyNormalized * weights.w11) + (sleepNormalized * weights.w21) + biases.b1;
+        state.hidden.h1 = hiddenActivation(activationSums.z1);
+        
+        activationSums.z2 = (studyNormalized * weights.w12) + (sleepNormalized * weights.w22) + biases.b2;
+        state.hidden.h2 = hiddenActivation(activationSums.z2);
+        
+        // Output Layer
+        activationSums.zo = (state.hidden.h1 * weights.wo1) + (state.hidden.h2 * weights.wo2) + biases.bo;
+        state.output.o1 = activationFunctions.sigmoid(activationSums.zo);
+    }
+    
+    function backpropagate() {
+        const { weights, biases, learningRate, hidden, output, target } = state;
+        const hiddenDerivative = activationFunctions[state.activation + 'Derivative'];
+
+        // -- Step 1: Output Layer Gradients --
+        const dLoss_dPred = -(target - output.o1); 
+        const dPred_dzo = activationFunctions.sigmoidDerivative(activationSums.zo);
+        const dLoss_dzo = dLoss_dPred * dPred_dzo;
+        
+        const dLoss_dWo1 = dLoss_dzo * hidden.h1;
+        const dLoss_dWo2 = dLoss_dzo * hidden.h2;
+        const dLoss_dBo = dLoss_dzo;
+        
+        // -- Step 2: Hidden Layer Gradients --
+        const dLoss_dh1 = dLoss_dzo * weights.wo1;
+        const dLoss_dh2 = dLoss_dzo * weights.wo2;
+        
+        const dh1_dz1 = hiddenDerivative(activationSums.z1);
+        const dh2_dz2 = hiddenDerivative(activationSums.z2);
+        
+        const dLoss_dw11 = dLoss_dh1 * dh1_dz1 * (state.inputs.study / 10);
+        const dLoss_dw21 = dLoss_dh1 * dh1_dz1 * (state.inputs.sleep / 10);
+        const dLoss_db1 = dLoss_dh1 * dh1_dz1;
+        
+        const dLoss_dw12 = dLoss_dh2 * dh2_dz2 * (state.inputs.study / 10);
+        const dLoss_dw22 = dLoss_dh2 * dh2_dz2 * (state.inputs.sleep / 10);
+        const dLoss_db2 = dLoss_dh2 * dh2_dz2;
+        
+        // -- Step 3: Update Weights and Biases --
+        state.weights.wo1 -= learningRate * dLoss_dWo1;
+        state.weights.wo2 -= learningRate * dLoss_dWo2;
+        state.biases.bo -= learningRate * dLoss_dBo;
+        
+        state.weights.w11 -= learningRate * dLoss_dw11;
+        state.weights.w21 -= learningRate * dLoss_dw21;
+        state.biases.b1 -= learningRate * dLoss_db1;
+        
+        state.weights.w12 -= learningRate * dLoss_dw12;
+        state.weights.w22 -= learningRate * dLoss_dw22;
+        state.biases.b2 -= learningRate * dLoss_db2;
+
+        return {
+            dLoss_dWo1, dLoss_dWo2, dLoss_dBo,
+            dLoss_dw11, dLoss_dw21, dLoss_dw12,
+            dLoss_dw22, dLoss_db1, dLoss_db2
+        };
+    }
+    
+    function runTrainingStep() {
+        // Find a random data point from the full dataset
+        const randomIndex = Math.floor(Math.random() * dataset.length);
+        const randomDataPoint = dataset[randomIndex];
+        state.inputs.study = randomDataPoint.study;
+        state.inputs.sleep = randomDataPoint.sleep;
+        state.target = randomDataPoint.target;
+
+        forwardPass();
+        const gradients = backpropagate();
+        state.epoch++;
+        updateUI();
+
+        // Animate the forward and backward passes
+        drawConnections('forward');
+        setTimeout(() => {
+            drawConnections('backward', {
+                dLoss_dWo1: gradients.dLoss_dWo1,
+                dLoss_dWo2: gradients.dLoss_dWo2,
+                dLoss_dw11: gradients.dLoss_dw11,
+                dLoss_dw21: gradients.dLoss_dw21,
+                dLoss_dw12: gradients.dLoss_dw12,
+                dLoss_dw22: gradients.dLoss_dw22
+            });
+        }, 1500);
+    }
+    
+    let isTraining = false;
+    async function startTraining() {
+        if (isTraining) {
+            isTraining = false;
+            elements.startTrainingBtn.innerText = "Start Training";
+            return;
+        }
+
+        isTraining = true;
+        elements.startTrainingBtn.innerText = "Stop Training";
+        const epochs = parseInt(elements.inputs.epochs.value);
+        
+        for (let i = 0; i < epochs && isTraining; i++) {
+            elements.epochStatus.innerText = `Epoch: ${state.epoch + 1} / ${epochs}`;
+            runTrainingStep();
+            await new Promise(resolve => setTimeout(resolve, 300)); // Short delay for visualization
+        }
+
+        isTraining = false;
+        elements.startTrainingBtn.innerText = "Start Training";
+    }
+
+    function resetNetwork() {
+        Object.assign(state, JSON.parse(JSON.stringify(defaultState)));
+        elements.inputs.learningRate.value = defaultState.learningRate;
+        elements.inputs.activationSelect.value = defaultState.activation;
+        elements.sliders.study.value = defaultState.inputs.study;
+        elements.sliders.sleep.value = defaultState.inputs.sleep;
+        document.querySelectorAll('.data-point').forEach(p => p.classList.remove('active'));
+        costHistory.length = 0; // Clear the cost history
+        forwardPass();
+        updateUI();
+        elements.epochStatus.innerText = "Epoch: 0";
+    }
+    
+    function updateStateFromSliders() {
+        state.inputs.study = parseFloat(elements.sliders.study.value);
+        state.inputs.sleep = parseFloat(elements.sliders.sleep.value);
+        document.querySelectorAll('.data-point').forEach(p => p.classList.remove('active'));
+        forwardPass();
+        updateUI();
+    }
+
+    function drawGradientDescent() {
+        const canvas = elements.gdCanvas;
+        const width = canvas.width = canvas.clientWidth;
+        const height = canvas.height = canvas.clientHeight;
+        const ctx = canvas.getContext('2d');
+        const padding = 20;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw axes
+        ctx.strokeStyle = var2hex('--secondary-text-color');
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        // Axis labels
+        ctx.fillStyle = var2hex('--text-color');
+        ctx.font = '12px Roboto';
+        ctx.textAlign = 'center';
+        ctx.fillText('Epochs', width / 2, height - 5);
+        ctx.save();
+        ctx.translate(10, height / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText('Error', 0, 0);
+        ctx.restore();
+
+        if (costHistory.length < 2) return;
+
+        const maxCost = Math.max(...costHistory);
+        const scaleX = (width - 2 * padding) / Math.max(1, costHistory.length - 1);
+        const scaleY = (height - 2 * padding) / (maxCost > 0 ? maxCost : 1);
+
+        // Draw the cost curve
+        ctx.beginPath();
+        ctx.strokeStyle = var2hex('--primary-color');
+        ctx.lineWidth = 2;
+        ctx.shadowColor = var2hex('--primary-color');
+        ctx.shadowBlur = 8;
+        ctx.moveTo(padding, height - padding - costHistory[0] * scaleY);
+        costHistory.forEach((cost, i) => {
+            const x = padding + i * scaleX;
+            const y = height - padding - cost * scaleY;
+            ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Draw the current point
+        const lastX = padding + (costHistory.length - 1) * scaleX;
+        const lastY = height - padding - costHistory[costHistory.length - 1] * scaleY;
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 4, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    function var2hex(varName) {
+        const style = getComputedStyle(document.body);
+        const color = style.getPropertyValue(varName);
+        return color.trim();
+    }
+
+    elements.sliders.study.addEventListener('input', updateStateFromSliders);
+    elements.sliders.sleep.addEventListener('input', updateStateFromSliders);
+    elements.inputs.learningRate.addEventListener('input', (e) => {
+        state.learningRate = parseFloat(e.target.value);
+    });
+    elements.inputs.activationSelect.addEventListener('change', (e) => {
+        state.activation = e.target.value;
+        forwardPass();
+        updateUI();
+    });
+    elements.singleStepBtn.addEventListener('click', runTrainingStep);
+    elements.startTrainingBtn.addEventListener('click', startTraining);
+    elements.resetBtn.addEventListener('click', resetNetwork);
+
+    // Initial setup
+    renderDataset();
+    resetNetwork();
+    setupTooltips();
+    window.addEventListener('resize', () => {
+        updateUI();
+    });
+</script>
+
+</body>
+</html>
