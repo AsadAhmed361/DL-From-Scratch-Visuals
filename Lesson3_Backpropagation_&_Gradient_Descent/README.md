@@ -129,6 +129,6 @@ Here:
 ---
 
 ## How to Run
-1. Open `index.html` in a web browser.  
+1. Open `lesson.html` in a web browser.  
 2. No server or extra dependencies required.  
 3. Start exploring forward pass, backpropagation, and gradient descent live.
