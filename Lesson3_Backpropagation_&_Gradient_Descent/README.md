@@ -1,7 +1,5 @@
 # Lesson 2: Visualizing Backpropagation & Gradient Descent
 
-
-
 This project is an **interactive web application** designed to visualize the core concepts of **backpropagation** and **gradient descent** in a simple neural network.  
 It serves as an **educational tool** to make these abstract machine learning algorithms more intuitive and understandable.
 
@@ -69,7 +67,7 @@ The app provides several interactive options:
   Change the activation function (Sigmoid, Tanh, ReLU) and observe its effect.
 
 - **Learning Rate**  
-  Adjust the learning rate (\(\eta\)):  
+  Adjust the learning rate \( \eta \):  
   - Large → Faster but unstable learning  
   - Small → Slower but precise learning  
 
@@ -83,46 +81,54 @@ The app provides several interactive options:
 
 ### 1. Forward Pass
 Input values flow through the network to make a prediction.  
-Each neuron computes:  
+Each neuron computes:
 
-\[
+$$
 z = \sum_{i=1}^{n} w_i x_i + b
-\]  
+$$
 
-Then applies an activation function \(f(z)\) → activation \(a\).  
+Then applies an activation function \( f(z) \) to produce its activation:
+
+$$
+a = f(z)
+$$
 
 ---
 
 ### 2. Backpropagation
-The prediction \(\hat{y}\) is compared with the actual target \(y\).  
-The **error** is propagated backward:  
+The prediction \( \hat{y} \) is compared with the actual target \( y \).  
+The **error** is propagated backward to calculate gradients:
 
-\[
+$$
 \frac{\partial L}{\partial W^{(l)}} = 
 \frac{\partial L}{\partial a^{(l)}} \cdot
 \frac{\partial a^{(l)}}{\partial z^{(l)}} \cdot
 \frac{\partial z^{(l)}}{\partial W^{(l)}}
-\]  
+$$
 
-Each weight learns how much it contributed to the error.  
+Where:  
+- \( L \) = Loss function  
+- \( W^{(l)} \) = Weight in layer \( l \)  
+- \( a^{(l)} \) = Activation in layer \( l \)  
+- \( z^{(l)} \) = Weighted sum input to neuron in layer \( l \)
 
 ---
 
 ### 3. Gradient Descent
-Uses gradients to update parameters:  
+Weights and biases are updated using the gradients:
 
-\[
+$$
 W := W - \eta \frac{\partial L}{\partial W}, \quad 
 b := b - \eta \frac{\partial L}{\partial b}
-\]  
+$$
 
-The network takes steps downhill on the error curve until it finds the minimum.  
+Here:  
+- \( \eta \) = Learning rate  
+- Updates move **opposite** to gradient direction to reduce error  
 
 ---
 
 ## How to Run
 1. Open `index.html` in a web browser.  
 2. No server or extra dependencies required.  
-3. Start exploring forward pass, backpropagation, and gradient descent live.  
-
----
+3. Start exploring forward pass, backpropagation, and gradient descent live.
