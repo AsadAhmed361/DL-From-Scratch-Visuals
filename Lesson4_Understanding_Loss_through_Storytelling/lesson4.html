@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<title>Loss Functions & Gradient Descent</title>
+<style>
+  :root {
+    --primary-color: #6a1b9a; /* Deep purple */
+    --secondary-color: #f06292; /* Light pink/red */
+    --background-color: #f4f7f9;
+    --card-background: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    --border-radius: 12px;
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    margin: 0;
+    padding: -20px;
+    background: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  h1 {
+    font-size: 1.5em;
+    font-weight: 300;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+  }
+
+  h2, h3 {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-top: 0;
+  }
+
+  p, ul {
+    margin-bottom: 10px;
+  }
+
+  #main-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .panel {
+    flex: 1 1 450px;
+    background: var(--card-background);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .panel:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  .formula {
+    background: #f0f0f5;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1em;
+    border-left: 4px solid var(--secondary-color);
+    white-space: pre-wrap;
+  }
+
+  /* Interactive Playground Specific Styles */
+  #playground-panel {
+    text-align: center;
+  }
+
+  #controls-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  label {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  select, button {
+    width: 100%;
+    max-width: 300px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  select:hover, button:hover {
+    border-color: var(--primary-color);
+  }
+
+  button {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+    border: none;
+  }
+  
+  button:hover {
+    background-color: #5d1587; /* Darker purple */
+  }
+
+  input[type=range] {
+    width: 100%;
+    max-width: 300px;
+    -webkit-appearance: none;
+    height: 8px;
+    background: #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--secondary-color);
+    border-radius: 50%;
+    border: 3px solid var(--card-background);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+
+  .data-display {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin: 20px 0;
+    gap: 20px;
+    font-size: 1.1em;
+    font-weight: 500;
+  }
+  
+  .data-item {
+    padding: 10px;
+    background: #f0f0f5;
+    border-radius: 8px;
+    flex-grow: 1;
+  }
+
+  #face {
+    font-size: 60px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+  }
+
+  canvas {
+    width: 100%;
+    height: 250px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-top: 20px;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    #main-container {
+      flex-direction: column;
+      align-items: center;
+    }
+    .panel {
+      width: 100%;
+      flex: 1 1 auto;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<h1>Loss Functions Notebook & Gradient Descent</h1>
+
+<div id="main-container">
+  <div class="panel">
+    <h2>📖 Notebook: Understanding Loss through Storytelling</h2>
+    <h3>The Classroom Prediction Game</h3>
+    <p>Imagine you're in a lively classroom. Your teacher asks: <strong>"Which day in August is Pakistan's Independence Day?"</strong> You don't know the answer, so you make a guess using a slider. Your guess is a "prediction" for the correct day, which is <strong>14</strong>.</p>
+    
+    <p>The teacher's feedback is the <strong>loss</strong>:
+      <ul>
+        <li>A small mistake gets a smile 🙂.</li>
+        <li>A perfect guess gets a big happy 😄.</li>
+        <li>A guess way off gets a frown 😡.</li>
+      </ul>
+    </p>
+
+    <hr>
+    
+    <h3>Learning with Loss Functions</h3>
+    <p>To measure how good your prediction is, we use "loss functions." Each function calculates the penalty based on how far your guess is from the true answer.</p>
+
+    <div class="formula">
+      <strong>Mean Squared Error (MSE):</strong><br>
+      (y - ŷ)²
+      This teacher marks harshly. The further you are, the bigger the penalty, as mistakes are squared.
+    </div>
+
+    <div class="formula">
+      <strong>Mean Absolute Error (MAE):</strong><br>
+      |y - ŷ|
+      Each wrong guess adds up linearly. The penalty for being a little wrong is small, and it increases at a constant rate.
+    </div>
+
+    <div class="formula">
+      <strong>Huber Loss:</strong><br>
+      if |y-ŷ| \leq δ: 0.5 * (y-ŷ)²<br>
+      else: δ * (|y-ŷ| - 0.5 * δ)
+      <br>
+      This is a balanced teacher. Small mistakes are punished like with MSE, but big mistakes are punished less severely, preventing extreme frustration.
+    </div>
+    
+    <hr>
+
+    <h3>Finding the Best Answer with Gradient Descent</h3>
+    <p><strong>Gradient Descent</strong> is a magical helper that adjusts your guess step-by-step to minimize the loss. After each feedback, it nudges your prediction slightly closer to the correct answer.</p>
+    <p>In the playground below:
+      <ul>
+        <li><span style="color:red; font-weight:bold;">🔴 Red Dot</span> = Your current guess.</li>
+        <li><span style="color:green; font-weight:bold;">🟢 Green Dot</span> = The true answer (14 August).</li>
+        <li><span style="color:orange; font-weight:bold;">🟠 Orange Dots</span> = The path Gradient Descent takes to find the best answer.</li>
+      </ul>
+    </p>
+  </div>
+
+  <div class="panel" id="playground-panel">
+    <h2>🎮 Interactive Playground</h2>
+    
+    <div id="controls-grid">
+      <div class="control-group">
+        <label for="lossSelect">Select a Loss Function</label>
+        <select id="lossSelect">
+          <option value="mse">MSE</option>
+          <option value="mae">MAE</option>
+          <option value="huber">Huber Loss</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="slider">Make Your Guess</label>
+        <input type="range" id="slider" min="1" max="31" step="1" value="1">
+      </div>
+    </div>
+
+    <div class="data-display">
+      <div class="data-item">
+        Teacher Mood: <span id="face">😡</span>
+      </div>
+      <div class="data-item">
+        Selected Day: <span id="dayValue">1</span>
+      </div>
+      <div class="data-item">
+        Loss: <span id="lossValue">0</span>
+      </div>
+    </div>
+
+    <canvas id="lossCanvas"></canvas>
+    
+    <button id="runGD">Run Gradient Descent</button>
+  </div>
+</div>
+<script>
+// ---------- Setup ----------
+const trueDay = 14;
+const slider = document.getElementById('slider');
+const face = document.getElementById('face');
+const lossDisplay = document.getElementById('lossValue');
+const dayDisplay = document.getElementById('dayValue');
+const canvas = document.getElementById('lossCanvas');
+const ctx = canvas.getContext('2d');
+const runGD = document.getElementById('runGD');
+const lossSelect = document.getElementById('lossSelect');
+
+let gdSteps = [];
+let delta = 1; // Huber threshold
+
+// ---------- Loss Functions ----------
+function computeLoss(pred, type){
+    if(type==="mse") return (pred-trueDay)**2;
+    if(type==="mae") return Math.abs(pred-trueDay);
+    if(type==="huber"){
+        const err = pred-trueDay;
+        if(Math.abs(err)<=delta) return 0.5*err*err;
+        else return delta*(Math.abs(err)-0.5*delta);
+    }
+    return 0;
+}
+
+// ---------- Gradient ----------
+function computeGrad(pred, type){
+    const err = pred-trueDay;
+    if(type==="mse") return 2*err;
+    if(type==="mae") return err>=0?1:-1;
+    if(type==="huber"){
+        if(Math.abs(err)<=delta) return err;
+        else return delta*(err>=0?1:-1);
+    }
+    return 0;
+}
+
+// ---------- Update Visuals ----------
+function updateVisual(currentPred=null){
+    const pred = currentPred!==null?currentPred:parseFloat(slider.value);
+    const lossType = lossSelect.value;
+    dayDisplay.textContent = Math.round(pred);
+    const loss = computeLoss(pred, lossType);
+    lossDisplay.textContent = loss.toFixed(2);
+
+    // Teacher Mood
+    const absError = Math.abs(pred-trueDay);
+    if(absError===0) face.textContent='😄';
+    else if(absError<=2) face.textContent='🙂';
+    else if(absError<=5) face.textContent='😐';
+    else if(absError<=10) face.textContent='😣';
+    else face.textContent='😡';
+
+    drawLossCurve(pred, lossType);
+}
+
+slider.addEventListener('input', ()=> updateVisual());
+lossSelect.addEventListener('change', ()=> {
+  gdSteps = []; // Clear GD steps when a new loss function is selected
+  updateVisual();
+});
+
+// ---------- Draw Loss Curve + GD Steps ----------
+function drawLossCurve(currentPred, lossType){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const step =1;
+    const points=[];
+    let maxLoss=0;
+    for(let x=1;x<=31;x+=step){
+        const loss = computeLoss(x, lossType);
+        points.push({x:x, loss:loss});
+        if(loss>maxLoss) maxLoss=loss;
+    }
+
+    // Loss Curve
+    ctx.beginPath();
+    points.forEach((pt,i)=>{
+        const x=(pt.x-1)*(canvas.width/30);
+        const y=canvas.height-(pt.loss/maxLoss)*canvas.height;
+        if(i===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle='blue';
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    // GD Steps
+    gdSteps.forEach(pred=>{
+        const dotX=(pred-1)*(canvas.width/30);
+        const dotY=canvas.height-(computeLoss(pred,lossType)/maxLoss)*canvas.height;
+        ctx.beginPath();
+        ctx.arc(dotX,dotY,5,0,Math.PI*2);
+        ctx.fillStyle='orange';
+        ctx.fill();
+    });
+
+    // Current Prediction
+    const dotX=(currentPred-1)*(canvas.width/30);
+    const dotY=canvas.height-(computeLoss(currentPred,lossType)/maxLoss)*canvas.height;
+    ctx.beginPath();
+    ctx.arc(dotX,dotY,6,0,Math.PI*2);
+    ctx.fillStyle='red';
+    ctx.fill();
+
+    // True Minimum
+    const minX=(trueDay-1)*(canvas.width/30);
+    const minY=canvas.height-0;
+    ctx.beginPath();
+    ctx.arc(minX,minY,6,0,Math.PI*2);
+    ctx.fillStyle='green';
+    ctx.fill();
+    ctx.fillText("Min Loss", minX-25, 20);
+}
+
+// ---------- Gradient Descent Animation ----------
+function runGradientDescent(){
+    gdSteps=[];
+    let pred=parseFloat(slider.value); // decimal for smooth GD
+    const lossType=lossSelect.value;
+    const lr = lossType==='mse'?0.3:0.1; // smaller learning rate for MAE/Huber
+
+    const interval=setInterval(()=>{
+        const grad=computeGrad(pred,lossType);
+        pred = pred - lr*grad;
+        // clamp
+        if(pred<1) pred=1;
+        if(pred>31) pred=31;
+        gdSteps.push(pred);
+        slider.value=Math.round(pred);
+        updateVisual(pred);
+        if(Math.abs(pred-trueDay)<0.01) clearInterval(interval);
+    }, 100);
+}
+
+// Initialize
+updateVisual();
+runGD.addEventListener('click', runGradientDescent);
+</script>
+
+</body>
+</html>
